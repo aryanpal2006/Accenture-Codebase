@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: triage_db
+    environment:
+      POSTGRES_DB: triage_db
+      POSTGRES_USER: triage_user
+      POSTGRES_PASSWORD: triage_secure_pass_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U triage_user -d triage_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  triage_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: triage_api
+    environment:
+      DATABASE_URL: postgresql://triage_user:triage_secure_pass_2024@postgres:5432/triage_db
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
