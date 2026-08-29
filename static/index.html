@@ -153,7 +153,12 @@
 
         <div class="voice-intake-container">
           <div class="voice-controls">
-            <button class="record-btn" id="recordMicBtn" onclick="toggleVoiceRecord()">🎙️</button>
+            <button class="record-btn" id="recordMicBtn" onclick="toggleVoiceRecord()" title="Toggle Continuous Speech Recording">🎙️</button>
+            <select id="voiceLangSelect" class="vital-select" style="max-width: 150px; padding: 5px 8px; font-size: 0.8rem; border-radius: 6px;" title="Speech Recognition Language">
+              <option value="hi-IN">🇮🇳 Hindi (हिंदी)</option>
+              <option value="en-IN" selected>🇮🇳 English / Hinglish</option>
+              <option value="en-US">🇺🇸 English (US)</option>
+            </select>
             <div class="waveform-sim" id="waveformContainer">
               <div class="bar"></div>
               <div class="bar"></div>
@@ -165,19 +170,23 @@
               <div class="bar"></div>
               <div class="bar"></div>
             </div>
-            <span style="font-size: 0.8rem; color: var(--text-muted);" id="micStatusText">Click mic for speech intake
-              simulation</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="micStatusText">Click mic for continuous speech intake</span>
           </div>
 
           <div class="sample-prompts">
-            <span style="font-size: 0.75rem; color: var(--text-muted); width: 100%;">⚡ Quick Clinical Test
-              Transcripts:</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); width: 100%;">⚡ Quick Clinical Test Transcripts:</span>
             <div class="sample-chip"
               onclick="loadSampleText('CAR VS POLE, MVC WITH FLIAL CHEST AND SEVERE HYPOXIA, RESPIRATORY DISTRESS')">🚨
               Critical MVC Trauma</div>
             <div class="sample-chip"
               onclick="loadSampleText('Sudden onset right-sided weakness, facial droop, and slurred speech starting 45 mins ago.')">
               🧠 Stroke / Facial Droop</div>
+            <div class="sample-chip"
+              onclick="loadSampleText('seene me tez dard hai aur saans lene me takleef ho rahi hai')">
+              🇮🇳 Hinglish: Cardiac / SOB</div>
+            <div class="sample-chip"
+              onclick="loadSampleText('सीने में बहुत तेज दर्द है, बाएं हाथ में झनझनाहट और पसीना आ रहा है')">
+              🇮🇳 Hindi: सीने में तेज दर्द</div>
             <div class="sample-chip"
               onclick="loadSampleText('Crushing substernal chest pain radiating to left arm and jaw accompanied by diaphoresis.')">
               🫀 Crushing Chest Pain</div>

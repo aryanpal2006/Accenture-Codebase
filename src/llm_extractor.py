@@ -80,7 +80,14 @@ def extract_features_with_gemini(
         api_key: Optional Gemini API key (falls back to GEMINI_API_KEY env variable).
     """
     has_devanagari = bool(re.search(r'[\u0900-\u097F]', chief_complaint))
-    hindi_instruction = "\nLANGUAGE RULE: The input chief complaint narrative contains Hindi/Devanagari script. Accurately translate the Hindi medical terms (e.g., 'सीने में दर्द' -> chest pain, 'सांस में तकलीफ' -> dyspnea, 'चक्कर' -> dizziness, 'उल्टी' -> vomiting) into English clinical understanding and set `is_hindi_script=true`." if has_devanagari else ""
+    hinglish_terms = [
+        "dard", "saans", "takleef", "bukhar", "ultee", "lakwa", "chakkar", "behoosh",
+        "chot", "khoon", "pait", "pet", "kamzori", "seene", "dhadkan", "sar", "thoda", "bahut"
+    ]
+    has_hinglish = any(re.search(r'\b' + kw + r'\b', chief_complaint.lower()) for kw in hinglish_terms)
+    is_hindi_language = has_devanagari or has_hinglish
+
+    hindi_instruction = "\nMULTILINGUAL / HINDI & HINGLISH RULE: The input chief complaint narrative contains Hindi (Devanagari script or Romanized Hinglish). Accurately translate all Hindi medical concepts (e.g., 'सीने में दर्द' / 'seene me dard' -> chest pain / cardiac, 'सांस में तकलीफ' / 'saans lene me dikkat' -> dyspnea, 'चक्कर' / 'chakkar' -> dizziness, 'उल्टी' / 'ultee' -> vomiting, 'लकवा' / 'lakwa' -> facial droop / stroke) into English clinical understanding and set `is_hindi_script=true`." if is_hindi_language else ""
 
     effective_api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 
@@ -95,7 +102,7 @@ def extract_features_with_gemini(
             prompt = f"""You are a clinical AI triage assistant. Parse the following patient chief complaint narrative and extract essential clinical features for downstream XGBoost Emergency Severity Index (ESI) scoring.
 {hindi_instruction}
 
-SAFETY RULE: You MUST deliberately over-flag rare, high-risk phrases (e.g. 'crushing pain', 'facial droop', 'leaking ascites', 'head bleed', 'dka', 'severe SOB') into `is_high_risk_phrase=True` to prevent dangerous under-triage.
+SAFETY RULE: Set `is_high_risk_phrase=True` ONLY when the complaint contains true emergency red-flag indicators (e.g. crushing chest pain, facial droop, stroke, cardiac arrest, flail chest, severe unmanageable respiratory distress, hematemesis, severe shock). DO NOT flag common mild/subacute complaints (e.g. sneezing, simple cough, mild cold, sore throat, rash, prescription refill, minor sprain) as high risk.
 
 ONSET RULES:
 - acute = onset < 2 hours (sudden, s/p event, trauma, arrest)
@@ -110,7 +117,7 @@ SYMPTOM CATEGORY RULES:
 For `symptom_category_encoded` use: cardiac=0, bleeding=1, consciousness=2, respiratory=3, trauma=4, neurological=5, gastrointestinal=6, psychiatric=7, infectious=8, general=9
 For `secondary_symptom_category_encoded` use: cardiac=0, bleeding=1, consciousness=2, respiratory=3, trauma=4, neurological=5, gastrointestinal=6, psychiatric=7, infectious=8, general=9, none=10
 For `symptom_onset_encoded` use: acute=0, subacute=1, delayed=2, chronic=3
-For `llm_pain_score`: Estimate a realistic numeric pain score (0.0 to 10.0) from the complaint. If words like 'extreme body pain', 'excruciating', 'severe', 'unbearable' are present, assign 8.5–10.0. If moderate pain/aches (e.g. 'flank pain', 'body pain', 'headache'), assign 5.0–7.0. If mild, assign 2.0–3.5. Only assign 0.0 if explicitly stated no pain or zero pain descriptors.
+For `llm_pain_score`: Estimate a realistic numeric pain score (0.0 to 10.0) from the complaint. If words like 'extreme body pain', 'excruciating', 'severe', 'unbearable', 'bahut tez dard' are present, assign 8.5–10.0. If moderate pain/aches (e.g. 'flank pain', 'body pain', 'headache', 'seene me dard'), assign 5.0–7.0. If mild, assign 2.0–3.5. Only assign 0.0 if explicitly stated no pain or zero pain descriptors.
 {pain_hint_text}
 
 Chief Complaint Narrative:
@@ -127,7 +134,7 @@ Chief Complaint Narrative:
             )
             if response.text:
                 parsed_dict = json.loads(response.text)
-                if has_devanagari:
+                if is_hindi_language:
                     parsed_dict["is_hindi_script"] = True
                 return ComplaintFeatures(**parsed_dict)
         except Exception as e:
@@ -200,25 +207,34 @@ def _rule_based_extractor(
         pain_val = pain_score_hint
 
     # ── 2. Boolean clinical category flags ────────────────────────────────────
+    # ── 2. Boolean clinical category flags (English + Hindi + Hinglish) ───────
     is_cardiac = any(w in text for w in [
         "chest pain", "cp", "palpitations", "cardiac", "nstemi", "stemi", "aortic dissection",
-        "jaw pain", "arm pain", "tightness", "pressure in chest", "angina"
+        "jaw pain", "arm pain", "tightness", "pressure in chest", "angina",
+        "seene me dard", "seene me dabav", "heart me pain", "chhati me dard", "dhadkan",
+        "सीने में दर्द", "छाती में दर्द", "छाती में दबाव", "धड़कन"
     ])
 
     is_neuro = any(w in text for w in [
         "facial droop", "slurred speech", "stroke", "cva", "sah", "sdh", "head bleed",
         "seizure", "confusion", "altered mental status", "numbness", "weakness", "lethargy",
-        "lethargic", "diplopia", "dizziness", "syncope", "headache", "unresponsive"
+        "lethargic", "diplopia", "dizziness", "syncope", "headache", "unresponsive",
+        "lakwa", "chehre me khichav", "muh tairha", "bolne me dikkat", "chakkar", "sar dard", "behoosh", "daura",
+        "लकवा", "चक्कर", "सर दर्द", "बेहोश", "दौरा"
     ])
 
     is_resp = any(w in text for w in [
         "sob", "shortness of breath", "dyspnea", "resp arrest", "respiratory", "intubated",
-        "hypoxia", "wheezing", "cannot breathe", "stridor", "asthma"
+        "hypoxia", "wheezing", "cannot breathe", "stridor", "asthma",
+        "saans lene me dikkat", "saans me takleef", "saans phoolna", "saans rukna",
+        "सांस्", "सांस लेने में तकलीफ", "सांस फूलना"
     ])
 
     is_trauma = any(w in text for w in [
         "mvc", "motor vehicle", "fall", "s/p fall", "head injury", "fracture", "fx",
-        "car vs pole", "assault", "rib pain", "laceration", "sw", "stab", "trauma"
+        "car vs pole", "assault", "rib pain", "laceration", "sw", "stab", "trauma",
+        "chot", "accident", "gir gaya", "gir gaye", "haddi tooti", "khoon nikal raha",
+        "चोट", "एक्सीडेंट", "हड्डी टूटी"
     ])
 
     is_psych = any(w in text for w in [
@@ -228,22 +244,23 @@ def _rule_based_extractor(
 
     is_gi = any(w in text for w in [
         "abd pain", "abdominal", "vomiting blood", "hematemesis", "coffee ground emesis",
-        "brbpr", "ascites", "leaking ascites", "diarrhea", "n/v", "epigastric", "luq", "rlq"
+        "brbpr", "ascites", "leaking ascites", "diarrhea", "n/v", "epigastric", "luq", "rlq",
+        "ultee", "pait me dard", "pet me dard", "khoon ki ultee", "pakhana me khoon",
+        "उल्टी", "पेट दर्द", "खून की उल्टी"
     ])
 
-    is_bleeding = any(w in text for w in BLEEDING_KEYWORDS)
-    is_consciousness = any(w in text for w in CONSCIOUSNESS_KEYWORDS)
-    is_infectious = any(w in text for w in INFECTIOUS_KEYWORDS)
+    is_bleeding = any(w in text for w in BLEEDING_KEYWORDS) or any(w in text for w in ["khoon", "खून"])
+    is_consciousness = any(w in text for w in CONSCIOUSNESS_KEYWORDS) or any(w in text for w in ["behoosh", "बेहोश"])
+    is_infectious = any(w in text for w in INFECTIOUS_KEYWORDS) or any(w in text for w in ["bukhar", "बुखार"])
 
     # ── High Risk Red Flag Decision ──────────────────────────────────────────
     # ONLY trigger red_flag / is_high_risk for genuine clinical emergencies.
-    # Mild symptoms (e.g. sneezing, simple cough, cold, sore throat) MUST NOT be red flags.
     matched_high_risk_kw = [kw for kw in HIGH_RISK_KEYWORDS if kw in text]
     
-    has_severe_cardiac = any(w in text for w in ["crushing", "stemi", "nstemi", "aortic dissection", "substernal", "jaw pain", "arm pain"])
-    has_severe_neuro = any(w in text for w in ["facial droop", "slurred speech", "stroke", "cva", "sah", "sdh", "head bleed", "seizure", "unresponsive", "altered mental status"])
-    has_severe_resp = any(w in text for w in ["resp arrest", "respiratory arrest", "intubated", "stridor", "cannot breathe", "gasping", "cyanosis", "flail chest", "severe sob", "severe dyspnea"])
-    has_severe_bleed = any(w in text for w in ["vomiting blood", "hematemesis", "coffee ground emesis", "brbpr", "hemorrhage", "leaking ascites"])
+    has_severe_cardiac = any(w in text for w in ["crushing", "stemi", "nstemi", "aortic dissection", "substernal", "jaw pain", "arm pain", "seene me tez dard", "सीने में तेज दर्द"])
+    has_severe_neuro = any(w in text for w in ["facial droop", "slurred speech", "stroke", "cva", "sah", "sdh", "head bleed", "seizure", "unresponsive", "altered mental status", "lakwa", "लकवा"])
+    has_severe_resp = any(w in text for w in ["resp arrest", "respiratory arrest", "intubated", "stridor", "cannot breathe", "gasping", "cyanosis", "flail chest", "severe sob", "severe dyspnea", "saans rukna"])
+    has_severe_bleed = any(w in text for w in ["vomiting blood", "hematemesis", "coffee ground emesis", "brbpr", "hemorrhage", "leaking ascites", "khoon ki ultee", "खून की उल्टी"])
 
     is_high_risk = bool(matched_high_risk_kw or has_severe_cardiac or has_severe_neuro or has_severe_resp or has_severe_bleed or is_consciousness)
     red_flag = 1 if is_high_risk else 0

@@ -458,64 +458,84 @@ function toggleVoiceRecord() {
   const btn = document.getElementById('recordMicBtn');
   const txt = document.getElementById('micStatusText');
   const bars = document.querySelectorAll('.waveform-sim .bar');
+  const langSelect = document.getElementById('voiceLangSelect');
+  const selectedLang = langSelect ? langSelect.value : 'hi-IN';
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (isRecording) {
-    // Stop recording
+    // Stop recording explicitly
+    isRecording = false;
     if (activeRecognition) {
       activeRecognition.stop();
       activeRecognition = null;
     }
-    isRecording = false;
     btn.classList.remove('recording');
-    txt.innerText = 'Click mic for speech intake';
+    txt.innerText = '✅ Speech recording stopped. Review narrative and click Analyze.';
     bars.forEach(b => b.classList.remove('animating'));
     return;
   }
 
-  // Start recording using Web Speech API
+  // Start continuous recording using Web Speech API
   if (SpeechRecognition) {
     try {
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      recognition.continuous = true;     // Continuous listening for long speech!
+      recognition.interimResults = true;  // Real-time interim results
+      recognition.lang = selectedLang;
+
+      let finalSpeechTranscript = document.getElementById('complaintInput').value || '';
 
       recognition.onstart = () => {
         isRecording = true;
         btn.classList.add('recording');
-        txt.innerText = '🎙️ Listening live... Speak clinical chief complaint';
+        txt.innerText = `🎙️ Continuous speech intake (${selectedLang})... Speak full complaint (Click mic when finished)`;
         bars.forEach(b => b.classList.add('animating'));
       };
 
       recognition.onresult = (event) => {
-        let transcript = '';
+        let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalSpeechTranscript += (finalSpeechTranscript && !finalSpeechTranscript.endsWith(' ') ? ' ' : '') + event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
         }
-        document.getElementById('complaintInput').value = transcript;
+        const combined = finalSpeechTranscript + (interimTranscript ? (finalSpeechTranscript ? ' ' : '') + interimTranscript : '');
+        document.getElementById('complaintInput').value = combined;
       };
 
       recognition.onerror = (event) => {
         console.warn('Speech recognition notice:', event.error);
-        txt.innerText = `Mic alert (${event.error}). Click to retry or type directly.`;
-        isRecording = false;
-        btn.classList.remove('recording');
-        bars.forEach(b => b.classList.remove('animating'));
+        if (event.error !== 'no-speech') {
+          txt.innerText = `Mic notice (${event.error}). Click to retry or type directly.`;
+        }
       };
 
       recognition.onend = () => {
-        isRecording = false;
-        btn.classList.remove('recording');
-        txt.innerText = '✅ Speech captured. Review narrative and click Analyze.';
-        bars.forEach(b => b.classList.remove('animating'));
-        activeRecognition = null;
+        if (isRecording) {
+          // Restart continuously if user hasn't explicitly clicked stop
+          try {
+            recognition.start();
+          } catch(e) {
+            isRecording = false;
+            btn.classList.remove('recording');
+            txt.innerText = '✅ Speech captured. Click mic to record more or Analyze.';
+            bars.forEach(b => b.classList.remove('animating'));
+            activeRecognition = null;
+          }
+        } else {
+          btn.classList.remove('recording');
+          txt.innerText = '✅ Speech captured. Review narrative and click Analyze.';
+          bars.forEach(b => b.classList.remove('animating'));
+          activeRecognition = null;
+        }
       };
 
       activeRecognition = recognition;
       recognition.start();
     } catch (e) {
-      console.error('Failed to start speech recognition:', e);
+      console.error('Failed to start continuous speech recognition:', e);
       _fallbackSimulatedVoice(btn, txt, bars);
     }
   } else {

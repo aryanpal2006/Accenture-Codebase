@@ -16,6 +16,8 @@ The system combines **LLM-driven narrative extraction**, **XGBoost machine learn
 1. **LLM Red Flag & Feature Extractor**:
    - Parses unstructured patient chief complaints into structured Pydantic schemas using Google Gemini models.
    - Identifies high-risk clinical phrases (e.g., *crushing chest pain*, *slurred speech*, *flail chest*, *hyperpyrexia / severe fever*).
+   - **Hindi & Hinglish Clinical NLP**: Translates and maps both Devanagari Hindi script (*सीने में तेज दर्द*, *सांस में तकलीफ*) and Romanized Hinglish (*seene me tez dard*, *saans lene me takleef*, *lakwa*, *bukhar*) into English clinical features.
+   - **Continuous Multilingual Voice Intake**: Web Speech API operating in continuous loop with language selector (`hi-IN`, `en-IN`, `en-US`), allowing long multi-sentence voice intake without premature cutoff.
    - **Calibrated Red-Flag Gating**: Differentiates benign viral/respiratory complaints (*sneezing*, *mild cough*, *sore throat*, *cold*) from genuine emergencies, preventing false positive ESI 1 over-triage.
    - **Clinical Reason Generator**: Provides explicit plain-language explanations detailing *why* a red flag was raised and what specific organ risks are present.
 
