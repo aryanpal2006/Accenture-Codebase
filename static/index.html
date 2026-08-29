@@ -5,7 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PatientTriage - Clinical AI Agent (Accenture Challenge)</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ef4444'/><path d='M35 50h30M50 35v30' stroke='white' stroke-width='14' stroke-linecap='round'/></svg>">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ef4444'/><path d='M35 50h30M50 35v30' stroke='white' stroke-width='14' stroke-linecap='round'/></svg>">
   <link rel="stylesheet" href="/static/styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
     rel="stylesheet">
@@ -24,7 +25,8 @@
     </div>
 
     <div class="header-actions">
-      <button class="btn btn-theme-circle" id="themeToggleBtn" onclick="toggleDarkMode()" title="Toggle Dark / Light Mode">
+      <button class="btn btn-theme-circle" id="themeToggleBtn" onclick="toggleDarkMode()"
+        title="Toggle Dark / Light Mode">
         <span id="themeIcon">🌙</span>
       </button>
       <button class="btn" id="queueToggleBtn" onclick="toggleQueuePanel()" title="Hide / Show Triage Queue">
@@ -153,8 +155,11 @@
 
         <div class="voice-intake-container">
           <div class="voice-controls">
-            <button class="record-btn" id="recordMicBtn" onclick="toggleVoiceRecord()" title="Toggle Continuous Speech Recording">🎙️</button>
-            <select id="voiceLangSelect" class="vital-select" style="max-width: 150px; padding: 5px 8px; font-size: 0.8rem; border-radius: 6px;" title="Speech Recognition Language">
+            <button class="record-btn" id="recordMicBtn" onclick="toggleVoiceRecord()"
+              title="Toggle Continuous Speech Recording">🎙️</button>
+            <select id="voiceLangSelect" class="vital-select"
+              style="max-width: 200px; min-width: 175px; padding: 5px 8px; font-size: 0.8rem; border-radius: 6px;"
+              title="Speech Recognition Language">
               <option value="hi-IN">🇮🇳 Hindi (हिंदी)</option>
               <option value="en-IN" selected>🇮🇳 English / Hinglish</option>
               <option value="en-US">🇺🇸 English (US)</option>
@@ -170,11 +175,13 @@
               <div class="bar"></div>
               <div class="bar"></div>
             </div>
-            <span style="font-size: 0.8rem; color: var(--text-muted);" id="micStatusText">Click mic for continuous speech intake</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="micStatusText">Click mic for continuous
+              speech intake</span>
           </div>
 
           <div class="sample-prompts">
-            <span style="font-size: 0.75rem; color: var(--text-muted); width: 100%;">⚡ Quick Clinical Test Transcripts:</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); width: 100%;">⚡ Quick Clinical Test
+              Transcripts:</span>
             <div class="sample-chip"
               onclick="loadSampleText('CAR VS POLE, MVC WITH FLIAL CHEST AND SEVERE HYPOXIA, RESPIRATORY DISTRESS')">🚨
               Critical MVC Trauma</div>

@@ -17,7 +17,7 @@ The system combines **LLM-driven narrative extraction**, **XGBoost machine learn
    - Parses unstructured patient chief complaints into structured Pydantic schemas using Google Gemini models.
    - Identifies high-risk clinical phrases (e.g., *crushing chest pain*, *slurred speech*, *flail chest*, *hyperpyrexia / severe fever*).
    - **Hindi & Hinglish Clinical NLP**: Translates and maps both Devanagari Hindi script (*सीने में तेज दर्द*, *सांस में तकलीफ*) and Romanized Hinglish (*seene me tez dard*, *saans lene me takleef*, *lakwa*, *bukhar*) into English clinical features.
-   - **Continuous Multilingual Voice Intake**: Web Speech API operating in continuous loop with language selector (`hi-IN`, `en-IN`, `en-US`), allowing long multi-sentence voice intake without premature cutoff.
+   - **Continuous Multilingual Voice Intake**: Web Speech API operating in continuous loop with dedicated language selector (`hi-IN`, `en-IN` English/Hinglish, `en-US`), allowing long multi-sentence voice intake without premature cutoff.
    - **Calibrated Red-Flag Gating**: Differentiates benign viral/respiratory complaints (*sneezing*, *mild cough*, *sore throat*, *cold*) from genuine emergencies, preventing false positive ESI 1 over-triage.
    - **Clinical Reason Generator**: Provides explicit plain-language explanations detailing *why* a red flag was raised and what specific organ risks are present.
 
@@ -39,10 +39,22 @@ The system combines **LLM-driven narrative extraction**, **XGBoost machine learn
    - Enables triage nurses to review, approve, or override AI recommendations with required clinical justification and complete audit trails.
 
 6. **Automated SBAR Physician Handoff Summaries**:
-   - Synthesizes intake vitals, red flags, and risk assessments into concise physician handoff reports.
+   - Synthesizes intake vitals, red flags, and risk assessments into concise physician handoff reports (Situation, Background, Assessment, Recommendation).
 
 7. **ED Surge Mode**:
    - Simulates high-volume emergency department conditions, re-prioritizing queues dynamically to focus on critical patients.
+
+---
+
+## 📋 Emergency Severity Index (ESI) Triage Scale
+
+| ESI Level | Acuity Category | Clinical Description | Example Conditions |
+| :---: | :--- | :--- | :--- |
+| **ESI 1** | **Resuscitation** | Immediate life-saving intervention required | Cardiac arrest, anaphylaxis, severe shock (`SBP < 80`), severe hypoxia (`SpO2 < 88%`), extreme hyperpyrexia (`Temp ≥ 105°F`) |
+| **ESI 2** | **Emergent** | High-risk situation, confused/lethargic, or severe pain/distress | Acute chest pain, stroke symptoms, severe dyspnea, hyperthermia (`Temp ≥ 103°F`) |
+| **ESI 3** | **Urgent** | Multiple resources required, stable vitals | Abdominal pain, moderate dyspnea, complex lacerations |
+| **ESI 4** | **Less Urgent** | Single resource required | Simple fracture, sprain, mild laceration requiring sutures |
+| **ESI 5** | **Non-Urgent** | No resources required | Prescription refill, suture removal, mild rash |
 
 ---
 
@@ -51,10 +63,10 @@ The system combines **LLM-driven narrative extraction**, **XGBoost machine learn
 ```
 Accenture-Codebase/
 ├── server.py                # FastAPI Web Server & REST API Endpoints
-├── test_and_run.py          # Automated Test Suite
+├── test_and_run.py          # Automated Unit & Integration Test Suite
 ├── src/
 │   ├── model.py             # XGBoost Pipeline & SHAP Explanations
-│   ├── llm_extractor.py     # Gemini LLM Narrative Feature Extractor
+│   ├── llm_extractor.py     # Gemini LLM Narrative Feature Extractor (Hindi/Hinglish/English)
 │   ├── safety_net.py        # Hard Clinical Safety Net Rule Engine
 │   ├── schemas.py           # Pydantic Schemas & Data Contracts
 │   ├── handoff_generator.py # SBAR Handoff Summary Generator
@@ -131,6 +143,16 @@ Execute the comprehensive automated unit & integration test suite:
 ```bash
 python test_and_run.py
 ```
+
+---
+
+## 🌐 Key API Endpoints
+
+- `GET /` - Clinical Triage Web Dashboard UI
+- `POST /api/triage` - Submits patient intake for Gemini feature extraction, XGBoost classification, and Safety Net evaluation
+- `POST /api/override` - Records HITL nurse override/approval with clinical justification and audit logging
+- `GET /api/handoff/{stay_id}` - Generates formatted SBAR physician handoff report
+- `POST /api/surge` - Toggles ED Surge Mode simulation
 
 ---
 
