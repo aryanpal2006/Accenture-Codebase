@@ -16,6 +16,7 @@ The system combines **LLM-driven narrative extraction**, **XGBoost machine learn
 1. **LLM Red Flag & Feature Extractor**:
    - Parses unstructured patient chief complaints into structured Pydantic schemas using Google Gemini models.
    - Identifies high-risk clinical phrases (e.g., *crushing chest pain*, *slurred speech*, *flail chest*, *hyperpyrexia / severe fever*).
+   - **Calibrated Red-Flag Gating**: Differentiates benign viral/respiratory complaints (*sneezing*, *mild cough*, *sore throat*, *cold*) from genuine emergencies, preventing false positive ESI 1 over-triage.
    - **Clinical Reason Generator**: Provides explicit plain-language explanations detailing *why* a red flag was raised and what specific organ risks are present.
 
 2. **XGBoost 5-Class ESI Acuity Classifier**:

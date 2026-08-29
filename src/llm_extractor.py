@@ -30,11 +30,12 @@ CONSCIOUSNESS_KEYWORDS = [
     "near syncope"
 ]
 
-# Infectious / sepsis keywords
+# Infectious / sepsis / mild viral keywords
 INFECTIOUS_KEYWORDS = [
     "fever", "neutropenia", "neutropenic fever", "sepsis", "uti", "cellulitis",
     "pneumonia", "infection", "infected", "pyelonephritis", "bacteremia", "chills",
-    "night sweats", "elevated wbc", "hyperpyrexia", "high fever"
+    "night sweats", "elevated wbc", "hyperpyrexia", "high fever", "cough", "sneezing",
+    "sore throat", "cold", "runny nose", "congestion"
 ]
 
 # Acute onset indicators (< 2 h)
@@ -212,7 +213,7 @@ def _rule_based_extractor(
 
     is_resp = any(w in text for w in [
         "sob", "shortness of breath", "dyspnea", "resp arrest", "respiratory", "intubated",
-        "hypoxia", "cough", "wheezing", "ili", "laryngitis"
+        "hypoxia", "wheezing", "cannot breathe", "stridor", "asthma"
     ])
 
     is_trauma = any(w in text for w in [
@@ -234,8 +235,18 @@ def _rule_based_extractor(
     is_consciousness = any(w in text for w in CONSCIOUSNESS_KEYWORDS)
     is_infectious = any(w in text for w in INFECTIOUS_KEYWORDS)
 
-    # High risk phrase (binary)
-    is_high_risk = any(kw in text for kw in HIGH_RISK_KEYWORDS) or is_cardiac or is_neuro or is_resp
+    # ── High Risk Red Flag Decision ──────────────────────────────────────────
+    # ONLY trigger red_flag / is_high_risk for genuine clinical emergencies.
+    # Mild symptoms (e.g. sneezing, simple cough, cold, sore throat) MUST NOT be red flags.
+    matched_high_risk_kw = [kw for kw in HIGH_RISK_KEYWORDS if kw in text]
+    
+    has_severe_cardiac = any(w in text for w in ["crushing", "stemi", "nstemi", "aortic dissection", "substernal", "jaw pain", "arm pain"])
+    has_severe_neuro = any(w in text for w in ["facial droop", "slurred speech", "stroke", "cva", "sah", "sdh", "head bleed", "seizure", "unresponsive", "altered mental status"])
+    has_severe_resp = any(w in text for w in ["resp arrest", "respiratory arrest", "intubated", "stridor", "cannot breathe", "gasping", "cyanosis", "flail chest", "severe sob", "severe dyspnea"])
+    has_severe_bleed = any(w in text for w in ["vomiting blood", "hematemesis", "coffee ground emesis", "brbpr", "hemorrhage", "leaking ascites"])
+
+    is_high_risk = bool(matched_high_risk_kw or has_severe_cardiac or has_severe_neuro or has_severe_resp or has_severe_bleed or is_consciousness)
+    red_flag = 1 if is_high_risk else 0
 
     # ── 3. Primary & Secondary symptom categories ──────────────────────────────
     matched_categories = []
@@ -271,9 +282,6 @@ def _rule_based_extractor(
         sec_category_encoded = 10
 
     category_encoded = SYMPTOM_CATEGORY_MAP.get(category, 9)
-
-    # ── 4. Red flag phrase (binary 0/1) ───────────────────────────────────────
-    red_flag = 1 if (is_high_risk or is_cardiac or is_consciousness) else 0
 
     # ── 5. Symptom onset (categorical) ────────────────────────────────────────
     if any(w in text for w in ACUTE_ONSET_KEYWORDS):
