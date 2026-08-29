@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PatientTriage - Clinical AI Agent (Accenture Challenge)</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23ef4444'/><path d='M35 50h30M50 35v30' stroke='white' stroke-width='14' stroke-linecap='round'/></svg>">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+
+  <!-- Header Navbar -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">🚑</div>
+      <div class="logo-text">
+        <h1>PatientTriage AI</h1>
+        <span>Clinical Emergency Decision Support System</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-theme-circle" id="themeToggleBtn" onclick="toggleDarkMode()" title="Toggle Dark / Light Mode">
+        <span id="themeIcon">🌙</span>
+      </button>
+      <button class="btn" id="queueToggleBtn" onclick="toggleQueuePanel()" title="Hide / Show Triage Queue">
+        <span id="queueToggleIcon">☰</span> <span id="queueToggleText">Triage Queue</span>
+      </button>
+      <button class="btn btn-surge" id="surgeBtn" onclick="toggleSurgeMode()">
+        🚨 Surge: <span id="surgeStatusText">NORMAL</span>
+      </button>
+      <button class="btn"
+        style="background: var(--input-bg, #f1f5f9); color: var(--text-muted, #475569); border: 1px solid var(--input-border, #cbd5e1); font-weight: 700;"
+        onclick="clearAllHistory()" title="Clear patient queue and history for a fresh shift">
+        🧹 Clear
+      </button>
+      <button class="btn btn-primary" onclick="openNewIntakeForm()">
+        + Intake
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <div class="app-container">
+
+    <!-- Left Sidebar: Patient Queue -->
+    <div class="queue-panel">
+      <div class="panel-header">
+        <span class="panel-title">📋 Triage Queue (<span id="queueCount">0</span>)</span>
+        <button class="btn-icon-close" onclick="toggleQueuePanel()" title="Collapse Queue">✕</button>
+      </div>
+
+      <input type="text" id="searchBox" class="search-box" placeholder="Search patient name, ID, complaint..."
+        onkeyup="filterQueue()">
+
+      <div class="filter-pills">
+        <div class="pill active" onclick="setFilter('all', this)">All</div>
+        <div class="pill" onclick="setFilter('1', this)">ESI 1 (Critical)</div>
+        <div class="pill" onclick="setFilter('2', this)">ESI 2 (Emergent)</div>
+        <div class="pill" onclick="setFilter('3', this)">ESI 3 (Urgent)</div>
+        <div class="pill" onclick="setFilter('low_conf', this)">⚠️ Low Conf</div>
+      </div>
+
+      <div class="patient-list" id="patientListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Right Workspace: Multi-Stage Workflow -->
+    <div class="workspace-panel">
+
+      <!-- Patient Demographics & Intake Header Card -->
+      <div class="workspace-card">
+        <div class="stage-title">
+          <span>Vitals Intake</span>
+        </div>
+
+        <div class="patient-id-card">
+          <div class="patient-id-left">
+            <div class="patient-name-wrapper">
+              <span class="patient-badge-icon">🪪</span>
+              <div style="flex: 1;">
+                <label for="v_name" class="patient-name-label">PATIENT FULL NAME</label>
+                <input type="text" id="v_name" class="patient-name-input" placeholder="e.g. John Doe / Jane Smith">
+              </div>
+            </div>
+            <p id="patientMetaText" class="patient-meta-details">Stay ID: -- | Age: -- | Gender: --</p>
+          </div>
+          <div id="historyBadge" class="status-badge history-status-badge">
+            Medical History: Unknown
+          </div>
+        </div>
+
+        <!-- Vitals Input Grid -->
+        <div class="vitals-grid">
+          <div class="vital-card-input card-temp">
+            <label><span class="vital-icon">🌡️</span> Temp</label>
+            <input type="number" step="0.1" id="v_temp" placeholder="98.6">
+            <span class="vital-unit">°F Fahrenheit</span>
+          </div>
+          <div class="vital-card-input card-hr">
+            <label><span class="vital-icon">💓</span> Heart Rate</label>
+            <input type="number" id="v_hr" placeholder="78">
+            <span class="vital-unit">bpm (Pulse)</span>
+          </div>
+          <div class="vital-card-input card-rr">
+            <label><span class="vital-icon">🫁</span> Resp Rate</label>
+            <input type="number" id="v_rr" placeholder="18">
+            <span class="vital-unit">breaths/min</span>
+          </div>
+          <div class="vital-card-input card-o2">
+            <label><span class="vital-icon">💧</span> SpO2 Sat</label>
+            <input type="number" id="v_o2" placeholder="98">
+            <span class="vital-unit">% Oxygen</span>
+          </div>
+          <div class="vital-card-input card-sbp">
+            <label><span class="vital-icon">🩸</span> Systolic BP</label>
+            <input type="number" id="v_sbp" placeholder="120">
+            <span class="vital-unit">mmHg (High)</span>
+          </div>
+          <div class="vital-card-input card-dbp">
+            <label><span class="vital-icon">🩸</span> Diastolic BP</label>
+            <input type="number" id="v_dbp" placeholder="80">
+            <span class="vital-unit">mmHg (Low)</span>
+          </div>
+          <div class="vital-card-input card-age">
+            <label><span class="vital-icon">👤</span> Age</label>
+            <input type="number" id="v_age" placeholder="45" min="0" max="130">
+            <span class="vital-unit">years</span>
+          </div>
+          <div class="vital-card-input card-gender">
+            <label><span class="vital-icon">⚧</span> Gender</label>
+            <select id="v_gender" class="vital-select">
+              <option value="Unspecified">-- Select --</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+            <span class="vital-unit">Identity</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 2: Ambient Voice Ingestion -->
+      <div class="workspace-card">
+        <div class="stage-title">
+          <span>Patient's Statement & Chief Complaint</span>
+        </div>
+
+        <div class="voice-intake-container">
+          <div class="voice-controls">
+            <button class="record-btn" id="recordMicBtn" onclick="toggleVoiceRecord()">🎙️</button>
+            <div class="waveform-sim" id="waveformContainer">
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="micStatusText">Click mic for speech intake
+              simulation</span>
+          </div>
+
+          <div class="sample-prompts">
+            <span style="font-size: 0.75rem; color: var(--text-muted); width: 100%;">⚡ Quick Clinical Test
+              Transcripts:</span>
+            <div class="sample-chip"
+              onclick="loadSampleText('CAR VS POLE, MVC WITH FLIAL CHEST AND SEVERE HYPOXIA, RESPIRATORY DISTRESS')">🚨
+              Critical MVC Trauma</div>
+            <div class="sample-chip"
+              onclick="loadSampleText('Sudden onset right-sided weakness, facial droop, and slurred speech starting 45 mins ago.')">
+              🧠 Stroke / Facial Droop</div>
+            <div class="sample-chip"
+              onclick="loadSampleText('Crushing substernal chest pain radiating to left arm and jaw accompanied by diaphoresis.')">
+              🫀 Crushing Chest Pain</div>
+            <div class="sample-chip"
+              onclick="loadSampleText('3-year-old child presenting with high fever, severe lethargy, and ear pain for 2 days.')">
+              👶 Pediatric High Fever</div>
+            <div class="sample-chip"
+              onclick="loadSampleText('Suture removal, minor finger laceration clean, no active bleeding.')">🩹 Minor
+              Laceration (ESI 4)</div>
+          </div>
+
+          <textarea id="complaintInput" class="complaint-input"
+            placeholder="Type or ambient spoken chief complaint narrative..."></textarea>
+
+          <button class="btn btn-primary" onclick="executeTriageAnalysis()" style="align-self: center;">
+            Generate Diagnosis
+          </button>
+        </div>
+      </div>
+
+      <!-- Stage 3: LLM Feature Extraction (Pydantic Output Parser) -->
+      <div class="workspace-card">
+        <div class="stage-title">
+          <span>Clinical Feature Assessment</span>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-muted);" id="llmSummaryNarrative">
+          Awaiting patient submission to extract clinical features...
+        </p>
+
+        <div class="llm-features-grid" id="llmFeaturesGrid">
+          <div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic; padding: 0.5rem 0;">
+            No feature extraction data yet. Enter patient details and click "Generate Diagnosis".
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 4 & 5: Acuity Scoring (XGBoost) + Hard Safety Net + SHAP Explanation -->
+      <div class="workspace-card">
+        <div class="stage-title">
+          <span>Severity Index & Clinical Insights</span>
+        </div>
+
+        <div class="acuity-banner">
+          <div class="acuity-main-badge">
+            <div class="esi-circle esi-pending" id="esiScoreCircle">--</div>
+            <div class="acuity-info">
+              <h2 id="esiLabelText">ESI Score Pending</h2>
+              <p id="safetyNetStatusText">Hard Safety Net: Awaiting Triage</p>
+            </div>
+          </div>
+          <div class="confidence-indicator">
+            <div class="confidence-score" id="confidenceScoreVal">--</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="confidenceLabel">AI Model Confidence</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main, #01060d);">SHAP
+            Reasoning & Clinical Signals:</h4>
+          <div class="shap-list" id="shapListContainer">
+            <div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic; padding: 0.5rem 0;">
+              SHAP clinical reasoning will appear here after AI triage analysis.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 6: Nurse Review (HITL Protocol) -->
+      <div class="workspace-card">
+        <div class="stage-title">
+          <span>Disposition & Care recommendations</span>
+        </div>
+
+        <div class="nurse-action-bar">
+          <button class="btn btn-action-approve" onclick="approveAiRecommendation()">
+            ✅ Approve Recommendation (ESI <span id="currentRecEsi">3</span>)
+          </button>
+          <button class="btn btn-action-override" onclick="openOverrideModal()">
+            ✏️ Clinical Override ESI Score
+          </button>
+          <button class="btn btn-action-handoff" onclick="openPhysicianHandoffModal()">
+            📄 Physician Handoff Summary
+          </button>
+        </div>
+
+        <div id="nurseStatusBox"
+          style="margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; display: none;">
+        </div>
+      </div>
+
+      <div
+        style="text-align: center; font-size: 0.8rem; color: #94a3b8; font-weight: 500; margin-top: 0.5rem; margin-bottom: 1.5rem;">
+        Triage suggestions do not replace clinical judgment. Verify all recommendations.
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Override Modal -->
+  <div class="modal-overlay" id="overrideModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title">✏️ Clinical Nurse Override</span>
+        <button class="close-btn" onclick="closeOverrideModal()">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        Select final human-assigned ESI level and log mandatory clinical rationale for audit trail:
+      </p>
+
+      <div class="override-grid">
+        <div class="override-option esi-1" onclick="selectOverrideEsi(1, this)">ESI 1</div>
+        <div class="override-option esi-2" onclick="selectOverrideEsi(2, this)">ESI 2</div>
+        <div class="override-option esi-3" onclick="selectOverrideEsi(3, this)">ESI 3</div>
+        <div class="override-option esi-4" onclick="selectOverrideEsi(4, this)">ESI 4</div>
+        <div class="override-option esi-5" onclick="selectOverrideEsi(5, this)">ESI 5</div>
+      </div>
+
+      <textarea id="overrideReasonInput" class="complaint-input"
+        placeholder="Clinical justification for overriding AI recommendation..."
+        style="height: 80px; margin-bottom: 1rem;"></textarea>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn" onclick="closeOverrideModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNurseOverride()">Save Override & Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Physician Handoff Modal (Official Clinical Hospital Report) -->
+  <div class="modal-overlay" id="handoffModal">
+    <div class="modal-box hospital-modal-box">
+      <div class="modal-header report-modal-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span class="report-header-icon">🏥</span>
+          <div>
+            <h3 class="modal-title report-modal-title">Physician Handoff Report</h3>
+            <p class="report-modal-subtitle">Official Emergency Department Medical Center EMR Export</p>
+          </div>
+        </div>
+        <button class="close-btn" onclick="closeHandoffModal()">&times;</button>
+      </div>
+
+      <div class="hospital-report-wrapper" id="handoffReportContent">
+        <div style="text-align: center; padding: 2rem; color: #64748b;">Generating hospital report summary...</div>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button class="btn" onclick="closeHandoffModal()">Close</button>
+        <button class="btn btn-primary" onclick="copyHandoffToClipboard()">📋 Copy Summary</button>
+        <button class="btn btn-dark" onclick="printHandoffReport()">🖨️ Print Official Chart</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+
+</html>
