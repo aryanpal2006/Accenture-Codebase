@@ -277,6 +277,11 @@ function renderWorkspace(patient, triage, nurseDecision) {
     </div>`;
   }
 
+  const redFlagNotice = (extracted.red_flag_reason) ? `
+    <div style="grid-column: 1 / -1; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 10px 14px; margin-top: 6px; color: #991b1b; font-size: 13px; line-height: 1.5;">
+      ${extracted.red_flag_reason}
+    </div>` : '';
+
   featGrid.innerHTML = `
     <div class="feature-pill-box">
       <span class="feature-label">Primary Category</span>
@@ -299,6 +304,7 @@ function renderWorkspace(patient, triage, nurseDecision) {
       <span class="feature-val" style="background: #fae8ff; color:#86198f;">${onsetLabel}</span>
     </div>
     ${hindiPill}
+    ${redFlagNotice}
   `;
 
   // Stage 4 Acuity Assessment (ALWAYS shows AI recommendation so nurse override in Stage 5 doesn't change it)

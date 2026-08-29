@@ -194,26 +194,30 @@ def evaluate_safety_net(
     if o2sat is not None and o2sat < spo2_crit:
         return (1, f"CRITICAL [ESI-1]: Severe hypoxia for {grp} (SpO2={o2sat}% < {spo2_crit}%). PALS/AHA threshold.")
 
-    # 3. Profound Shock — ATLS Class III/IV (age-stratified SBP)
+    # 3. Extreme Hyperpyrexia (Temp >= 105.0°F / 40.5°C) — Critical Thermoregulatory Emergency
+    if temperature is not None and temperature >= 105.0:
+        return (1, f"CRITICAL [ESI-1]: Extreme Hyperpyrexia (Temp={temperature}°F ≥ 105.0°F). Critical thermoregulatory failure / heat stroke / central fever risk requiring immediate emergency resuscitation & cooling protocol.")
+
+    # 4. Profound Shock — ATLS Class III/IV (age-stratified SBP)
     if sbp is not None and sbp < sbp_shock:
         return (1, f"CRITICAL [ESI-1]: Profound hypotensive shock for {grp} (SBP={sbp} mmHg < {sbp_shock} mmHg). ATLS.")
 
-    # 4. Critical Respiratory Failure (age-stratified RR)
+    # 5. Critical Respiratory Failure (age-stratified RR)
     if resprate is not None and (resprate > rr_high or resprate < rr_low):
         return (1, f"CRITICAL [ESI-1]: Respiratory failure for {grp} (RR={resprate}/min, normal {rr_low}–{rr_high}). PALS.")
 
-    # 5. Life-Threatening Dysrhythmia (age-stratified HR)
+    # 6. Life-Threatening Dysrhythmia (age-stratified HR)
     if heartrate is not None and (heartrate > hr_high or heartrate < hr_low):
         return (1, f"CRITICAL [ESI-1]: Life-threatening dysrhythmia for {grp} (HR={heartrate} bpm, range {hr_low}–{hr_high}). AHA.")
 
-    # 6. Stroke Protocol Active — AHA/ASA 2019 (ESI-1 if within stroke window)
+    # 7. Stroke Protocol Active — AHA/ASA 2019 (ESI-1 if within stroke window)
     if _stroke_screen(sbp, age, raw_lower):
         # Hypertensive urgency often accompanies acute stroke
         if sbp is not None and sbp >= 160:
             return (1, f"CRITICAL [ESI-1]: Active stroke presentation (FAST+) with hypertension (SBP={sbp}). AHA/ASA 2019.")
         return (2, "EMERGENCY [ESI-2]: Stroke protocol activated — FAST criteria met. AHA/ASA 2019.")
 
-    # 7. Trauma Alert (ATLS Class III/IV shock + major mechanism)
+    # 8. Trauma Alert (ATLS Class III/IV shock + major mechanism)
     if _trauma_alert(heartrate, sbp, grp, raw_lower):
         return (1, f"CRITICAL [ESI-1]: Major trauma with hemodynamic instability ({grp}). ATLS 10th Ed.")
 
@@ -221,33 +225,36 @@ def evaluate_safety_net(
     # LEVEL 2 — ESI 2 EMERGENT / HIGH-RISK SAFETY NET
     # ═══════════════════════════════════════════════════════════════════════════
 
-    # 8. Moderate Hypoxia Warning (age-stratified)
+    # 9. Moderate Hypoxia Warning (age-stratified)
     if o2sat is not None and spo2_crit <= o2sat < spo2_warn:
         return (2, f"EMERGENCY [ESI-2]: Hypoxia requiring urgent O2 for {grp} (SpO2={o2sat}%). ACEP ESI v4.")
 
-    # 9. Hypertensive Emergency — ACC/AHA 2018 (age-stratified)
+    # 10. Hypertensive Emergency — ACC/AHA 2018 (age-stratified)
     if sbp is not None and sbp > sbp_htn:
         return (2, f"EMERGENCY [ESI-2]: Hypertensive urgency for {grp} (SBP={sbp} mmHg > {sbp_htn}). ACC/AHA.")
 
-    # 10. Hypotensive Warning Band
+    # 11. Hypotensive Warning Band
     if sbp is not None and sbp_shock <= sbp < sbp_hypo_w:
         return (2, f"EMERGENCY [ESI-2]: Hypotension warning for {grp} (SBP={sbp} mmHg). ATLS/ACEP.")
 
-    # 11. Severe Tachycardia / Bradycardia Warning (age-stratified)
+    # 12. Severe Tachycardia / Bradycardia Warning (age-stratified)
     if heartrate is not None and heartrate >= hr_tachy_w:
         return (2, f"EMERGENCY [ESI-2]: Tachycardia for {grp} (HR={heartrate} bpm ≥ {hr_tachy_w}). PALS/AHA.")
     if heartrate is not None and hr_low <= heartrate < hr_brady_w:
         return (2, f"EMERGENCY [ESI-2]: Bradycardia warning for {grp} (HR={heartrate} bpm). PALS/AHA.")
 
-    # 12. Temperature Extremes (age-stratified)
+    # 13. Temperature Extremes & Severe Hyperthermia (age-stratified)
     if temperature is not None and temperature < 95.0:
-        return (2, f"EMERGENCY [ESI-2]: Severe hypothermia (Temp={temperature}°F). AHA ACLS 2022.")
+        return (2, f"EMERGENCY [ESI-2]: Severe hypothermia (Temp={temperature}°F < 95.0°F). Systemic exposure / shock risk. AHA ACLS 2022.")
+    if temperature is not None and temperature >= 103.0:
+        return (2, f"EMERGENCY [ESI-2]: Severe Hyperthermia / High Fever (Temp={temperature}°F ≥ 103.0°F). High risk of sepsis, central neuro-fever, or severe systemic inflammatory syndrome. ACEP ESI v4.")
     if temperature is not None and temperature > temp_high:
-        # Geriatric: any fever is emergent; others: only with infection context
-        if grp == "geriatric":
-            return (2, f"EMERGENCY [ESI-2]: Fever in geriatric patient (Temp={temperature}°F > {temp_high}°F). AGS/ACEP 2023.")
-        if any(kw in raw_lower for kw in ["neutropenia", "fever", "infection", "sepsis", "chemo"]):
-            return (2, f"EMERGENCY [ESI-2]: High-risk fever in infection context (Temp={temperature}°F). ACEP ESI v4.")
+        if grp in ["infant", "toddler", "geriatric"]:
+            return (2, f"EMERGENCY [ESI-2]: High-risk fever in vulnerable group ({grp}) (Temp={temperature}°F > {temp_high}°F). AGS/ACEP 2023 / PALS 2020.")
+        if any(kw in raw_lower for kw in ["neutropenia", "fever", "infection", "sepsis", "chemo", "chills", "rigors"]):
+            return (2, f"EMERGENCY [ESI-2]: High-risk fever in infection context (Temp={temperature}°F > {temp_high}°F). ACEP ESI v4.")
+        if temperature >= 101.5:
+            return (2, f"EMERGENCY [ESI-2]: Elevated core temperature (Temp={temperature}°F ≥ 101.5°F). Requires urgent infectious and metabolic evaluation.")
 
     # 13. Sepsis Screen — Sepsis-3 / JAMA 2016 (Singer et al.)
     is_septic, sepsis_breaches, inf_src = _sepsis_screen(grp, heartrate, resprate, temperature, sbp, o2sat, raw_lower)

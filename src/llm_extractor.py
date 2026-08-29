@@ -12,7 +12,8 @@ HIGH_RISK_KEYWORDS = [
     "hematemesis", "brbpr", "coffee ground emesis", "dka", "intubated", "resp arrest",
     "hypotension", "hypoxia", "nstemi", "cva", "stroke", "seizure", "unresponsive",
     "car vs pole", "head injury", "lethargic", "elevated inr", "mvc", "s/p fall",
-    "altered mental status", "respiratory arrest", "picc eval", "sdh", "sah"
+    "altered mental status", "respiratory arrest", "picc eval", "sdh", "sah",
+    "hyperpyrexia", "106", "105", "104", "high fever"
 ]
 
 # Bleeding indicators for the new 'bleeding' symptom category
@@ -33,7 +34,7 @@ CONSCIOUSNESS_KEYWORDS = [
 INFECTIOUS_KEYWORDS = [
     "fever", "neutropenia", "neutropenic fever", "sepsis", "uti", "cellulitis",
     "pneumonia", "infection", "infected", "pyelonephritis", "bacteremia", "chills",
-    "night sweats", "elevated wbc"
+    "night sweats", "elevated wbc", "hyperpyrexia", "high fever"
 ]
 
 # Acute onset indicators (< 2 h)
@@ -301,6 +302,27 @@ def _rule_based_extractor(
     elif any(w in text for w in ["pain", "ache", "hurt", "sore"]):
         llm_pain = max(llm_pain, 5.0)
 
+    # Generate explicit clinical explanation for red flag trigger
+    red_flag_reason_str = ""
+    if red_flag == 1 or is_high_risk:
+        matched_kw = [kw for kw in HIGH_RISK_KEYWORDS if kw in text]
+        flag_details = []
+        if matched_kw:
+            flag_details.append(f"High-risk terms detected: '{', '.join(matched_kw)}'")
+        if is_cardiac:
+            flag_details.append("Cardiac Ischemia / Acute Coronary Syndrome indicators")
+        if is_neuro:
+            flag_details.append("Acute Stroke / Neurological deficit features")
+        if is_resp:
+            flag_details.append("Airway compromise / Respiratory distress risk")
+        if is_bleeding:
+            flag_details.append("Hemorrhage / Gastrointestinal bleeding indicators")
+        if is_consciousness:
+            flag_details.append("Altered mental status / Syncope alert")
+        
+        detail_text = " | ".join(flag_details) if flag_details else "Critical symptom severity pattern detected"
+        red_flag_reason_str = f"🚩 Red Flag Warning ({detail_text}): High probability of life-threatening organ dysfunction requiring immediate emergency clinician evaluation."
+
     has_devanagari = bool(re.search(r'[\u0900-\u097F]', chief_complaint))
 
     return ComplaintFeatures(
@@ -321,6 +343,7 @@ def _rule_based_extractor(
         secondary_symptom_category=sec_category,
         secondary_symptom_category_encoded=sec_category_encoded,
         red_flag_phrase=red_flag,
+        red_flag_reason=red_flag_reason_str,
         symptom_onset=onset,
         symptom_onset_encoded=onset_encoded,
     )

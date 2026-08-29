@@ -15,17 +15,22 @@ The system combines **LLM-driven narrative extraction**, **XGBoost machine learn
 
 1. **LLM Red Flag & Feature Extractor**:
    - Parses unstructured patient chief complaints into structured Pydantic schemas using Google Gemini models.
-   - Identifies high-risk clinical phrases (e.g., *crushing chest pain*, *slurred speech*, *flail chest*).
+   - Identifies high-risk clinical phrases (e.g., *crushing chest pain*, *slurred speech*, *flail chest*, *hyperpyrexia / severe fever*).
+   - **Clinical Reason Generator**: Provides explicit plain-language explanations detailing *why* a red flag was raised and what specific organ risks are present.
 
 2. **XGBoost 5-Class ESI Acuity Classifier**:
    - Predicts ESI Acuity levels (ESI 1: Immediate life-saving intervention to ESI 5: Non-urgent).
    - Combines vital signs (SpO2, SBP, DBP, Heart Rate, Resp Rate, Temp) with extracted clinical indicators.
 
 3. **Independent Hard Clinical Safety Net**:
-   - Deterministic rule layer that automatically overrides ML predictions whenever vital signs breach critical thresholds (e.g., SpO2 < 88%, SBP < 80 mmHg).
+   - Deterministic rule layer that automatically overrides ML predictions whenever vital signs breach critical thresholds:
+     - **Extreme Hyperpyrexia (`Temp ≥ 105.0°F`)** → **ESI-1 Resuscitation** (Critical heat stroke / central thermoregulatory failure risk requiring immediate emergency cooling).
+     - **Severe Hyperthermia (`Temp ≥ 103.0°F`)** → **ESI-2 Emergent** (Urgent sepsis / CNS infection protocol).
+     - **Profound Shock (`SBP < 80 mmHg`)** → **ESI-1 Resuscitation** (ATLS shock classification).
+     - **Severe Hypoxia (`SpO2 < 88%`)** → **ESI-1 Resuscitation** (AHA/PALS airway protocol).
 
 4. **SHAP Explainable AI (XAI)**:
-   - Provides local feature impact explanations for every prediction, showing clinicians *why* a specific acuity level was assigned.
+   - Provides local feature impact explanations for every prediction, showing clinicians *why* a specific acuity level was assigned with clear clinical descriptions instead of generic placeholder text.
 
 5. **Human-in-the-Loop (HITL) Nurse Workflow**:
    - Enables triage nurses to review, approve, or override AI recommendations with required clinical justification and complete audit trails.
@@ -106,7 +111,7 @@ GOOGLE_API_KEY=your_actual_gemini_api_key_here
 
 ### 4. Running the Application
 
-Start the server using `python server.py` or `uvicorn`:
+Start the server using `python server.py`:
 
 ```bash
 python server.py

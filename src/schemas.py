@@ -95,6 +95,10 @@ class ComplaintFeatures(BaseModel):
             "a potentially life-threatening situation requiring immediate escalation."
         )
     )
+    red_flag_reason: Optional[str] = Field(
+        default="",
+        description="Plain-language clinical explanation detailing why a red flag was triggered and its clinical significance."
+    )
     symptom_onset: str = Field(
         default="subacute",
         description=(

@@ -332,8 +332,8 @@ def _generate_plain_language_shap(feat_name: str, val: Any, s_val: float, acuity
         return f"💥 Reported Pain Level: {desc}"
     elif feat_name == "red_flag_phrase":
         if val_int == 1:
-            return f"🚩 Critical Narrative: High-risk red flag keywords detected in complaint narrative"
-        return f"Narrative: No high-risk buzzwords detected"
+            return f"🚩 Critical Clinical Red Flag: High-risk medical phrases present in chief complaint (indicates high risk of acute organ pathology requiring priority emergency evaluation)."
+        return f"Narrative Analysis: Standard clinical presentation (No high-risk red-flag keywords detected)."
     elif feat_name == "o2sat":
         return f"🫁 Oxygenation: SpO2 {val}% (PALS/AHA target ≥94%)"
     elif feat_name == "heartrate":
@@ -345,14 +345,23 @@ def _generate_plain_language_shap(feat_name: str, val: Any, s_val: float, acuity
     elif feat_name == "resprate":
         return f"🫁 Respiratory Rate: {val} breaths/min"
     elif feat_name == "temperature":
-        return f"🌡️ Core Temperature: {val}°F"
+        t_val = float(val) if val is not None else 98.6
+        if t_val >= 105.0:
+            return f"🌡️ Core Temperature: {t_val}°F — EXTREME HYPERPYREXIA (Critical Heat Stroke / Central Nervous System thermoregulatory failure risk)"
+        elif t_val >= 103.0:
+            return f"🌡️ Core Temperature: {t_val}°F — SEVERE HYPERTHERMIA (High Sepsis / CNS infection risk)"
+        elif t_val >= 100.4:
+            return f"🌡️ Core Temperature: {t_val}°F — Pyrexia / Elevated Temperature"
+        elif t_val <= 95.0:
+            return f"🌡️ Core Temperature: {t_val}°F — CRITICAL HYPOTHERMIA (Systemic Exposure / Shock risk)"
+        return f"🌡️ Core Temperature: {t_val}°F (Normal thermoregulation)"
     elif feat_name == "age_numeric":
         return f"👤 Patient Age: {int(val) if val is not None else 'N/A'} years old (age-adjusted baseline)"
     elif feat_name == "gender_encoded":
         g_name = "Male" if val_int == 0 else ("Female" if val_int == 1 else "Other")
         return f"Demographics: Biological sex ({g_name})"
     elif feat_name == "feat_is_high_risk":
-        return f"⚠️ High-Risk Triage Flag: Critical symptom severity identified"
+        return f"⚠️ High-Risk Clinical Flag: High symptom severity pattern detected in complaint (indicates potential acute cardiac, neuro, respiratory, or thermoregulatory crisis requiring immediate prioritization)."
     elif feat_name == "feat_is_cardiac":
         return f"🫀 Cardiac Indicators: Chest pressure / radiation detected"
     elif feat_name == "feat_is_neurological":
