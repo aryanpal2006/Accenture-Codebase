@@ -1,4 +1,4 @@
-# patientTriage: Clinical AI Agent & Emergency Department Triage System
+# PatientTriage: Clinical AI Agent & Emergency Department Triage System
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
