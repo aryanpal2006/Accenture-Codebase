@@ -6,7 +6,7 @@
 [![Google Gemini API](https://img.shields.io/badge/Gemini_API-Pydantic_Extraction-purple.svg)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**patientTriage** is an enterprise-grade, safety-first Emergency Department (ED) clinical AI system engineered to perform automated patient intake, multi-class Emergency Severity Index (ESI) acuity classification, explainable decision support, and automated physician handoff generation.
+**PatientTriage** is an enterprise-grade, safety-first Emergency Department (ED) clinical AI system engineered to perform automated patient intake, multi-class Emergency Severity Index (ESI) acuity classification, explainable decision support, and automated physician handoff generation.
 
 By combining **Google Gemini LLM narrative extraction**, **XGBoost supervised machine learning**, **SHAP (SHapley Additive exPlanations) explainability**, an independent **Age-Stratified Hard Clinical Safety Net**, and a **Human-in-the-Loop (HITL) nurse workflow**, patientTriage delivers rapid, transparent, and mathematically grounded clinical triage while strictly guaranteeing zero unhandled critical clinical risk.
 
